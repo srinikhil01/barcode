@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90vw;
+            max-width: 500px;
+            text-align: center;
+        }
+        .form-container h2 {
+            margin-bottom: 20px;
+        }
+        .form-container input,
+        .form-container button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .form-container button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        #scanner-container {
+            position: relative;
+            width: 100%;
+            height: 50vh; /* Adjust the height for better mobile visibility */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        #scanner-container canvas, #scanner-container video {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+        }
+        
+        /* Media queries for mobile devices */
+        @media (max-width: 768px) {
+            .form-container {
+                width: 95vw;
+                padding: 15px;
+            }
+            #scanner-container {
+                height: 40vh; /* Reduce height for smaller screens */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .form-container {
+                width: 100vw;
+                padding: 10px;
+            }
+            #scanner-container {
+                height: 35vh; /* Further reduce height for very small screens */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="form-container" id="scanner-container">
+        <p>Scanned Barcode: <span id="scanned-barcode"></span></p>
+        <form id="barcodeForm">
+            <input type="hidden" id="barcode" name="barcode">
+            <button type="submit">Save Barcode</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Quagga.init({
+                inputStream: {
+                    type: 'LiveStream',
+                    target: document.querySelector('#scanner-container'),
+                    constraints: {
+                        width: 640,
+                        height: 480,
+                        facingMode: 'environment' // Use the back camera
+                    }
+                },
+                decoder: {
+                    readers: ['code_128_reader',  // Most common
+                    'ean_reader',       // EAN
+                    'ean_8_reader',     // EAN-8
+                    'upc_reader',       // UPC
+                    'upc_e_reader',     // UPC-E
+                    'code_39_reader',   // Code 39
+                    'code_39_vin_reader',// Code 39 VIN
+                    'codabar_reader',   // Codabar
+                    'i2of5_reader',     // Interleaved 2 of 5
+                    '2of5_reader',      // Standard 2 of 5
+                    'code_93_reader'] // Specify the type of barcode you want to scan
+                }
+            }, function (err) {
+                if (err) {
+                    console.log(err);
+                    return;
+                }
+                Quagga.start();
+            });
+
+            Quagga.onDetected(function (result) {
+                var barcode = result.codeResult.code;
+                document.getElementById('scanned-barcode').innerText = barcode;
+                document.getElementById('barcode').value = barcode;
+                Quagga.stop(); // Stop scanning after detecting a barcode
+            });
+
+            document.getElementById('barcodeForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+                fetch('save_barcode.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Barcode saved: ' + data.message);
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+    </script>
+</body>
+</html>
